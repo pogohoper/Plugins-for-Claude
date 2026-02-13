@@ -1,0 +1,17 @@
+{
+  "name": "persistent-agent",
+  "version": "0.1.0",
+  "description": "Create persistent domain-expert agents that govern specific parts of your codebase, maintain deep knowledge, and can be consulted by other working agents.",
+  "author": "Plugins_for_claude",
+  "skills": [
+    "skills/register-domain/SKILL.md",
+    "skills/consult/SKILL.md",
+    "skills/domain-sync/SKILL.md"
+  ],
+  "agents": [
+    "agents/domain-expert.md"
+  ],
+  "hooks": [
+    "hooks/hooks.json"
+  ]
+}
