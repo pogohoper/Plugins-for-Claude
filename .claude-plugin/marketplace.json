@@ -1,12 +1,9 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "plugins-for-claude",
+  "description": "Advanced Claude Code plugins: TTS, persistent domain agents, and orchestrator",
   "owner": {
     "name": "pogohoper"
-  },
-  "metadata": {
-    "description": "Advanced Claude Code plugins: TTS, persistent domain agents, and orchestrator",
-    "version": "1.0.0",
-    "pluginRoot": "./plugins"
   },
   "plugins": [
     {
@@ -17,6 +14,7 @@
       "author": {
         "name": "pogohoper"
       },
+      "category": "productivity",
       "keywords": ["tts", "text-to-speech", "audio", "edge-tts"]
     },
     {
@@ -27,6 +25,7 @@
       "author": {
         "name": "pogohoper"
       },
+      "category": "development",
       "keywords": ["agents", "domain-expert", "codebase", "knowledge"]
     },
     {
@@ -37,6 +36,7 @@
       "author": {
         "name": "pogohoper"
       },
+      "category": "development",
       "keywords": ["orchestrator", "agents", "teams", "workflow"]
     }
   ]
