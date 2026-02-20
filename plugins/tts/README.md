@@ -2,6 +2,30 @@
 
 Text-to-speech plugin using [edge-tts](https://github.com/rany2/edge-tts) with chunked playback for low latency.
 
+## Quick Start
+
+**One-liner install (clone + deps):**
+
+```bash
+git clone https://github.com/pogohoper/Plugins-for-Claude.git && cd Plugins-for-Claude/plugins/tts && pip install -r requirements.txt
+```
+
+**Then run Claude Code with the plugin:**
+
+```bash
+claude --plugin-dir ./Plugins-for-Claude/plugins/tts
+```
+
+**Or use the install script:**
+
+```bash
+# macOS/Linux
+./install.sh
+
+# Windows
+install.cmd
+```
+
 ## Features
 
 - **Low-latency chunked playback** — splits text at sentence boundaries and pre-generates the next chunk while the current one plays
@@ -9,32 +33,9 @@ Text-to-speech plugin using [edge-tts](https://github.com/rany2/edge-tts) with c
 - **Adjustable speech rate** — slow, normal, fast
 - **File output** — optionally save audio to MP3 instead of playing
 
-## Installation
-
-### Prerequisites
-
-```bash
-pip install edge-tts pygame
-```
-
-### Install the plugin
-
-```bash
-claude --plugin-dir /path/to/Plugins-for-Claude/plugins/tts
-```
-
-Or clone the repo and point to the plugin directory:
-
-```bash
-git clone https://github.com/pogohoper/Plugins-for-Claude.git
-claude --plugin-dir ./Plugins-for-Claude/plugins/tts
-```
-
 ## Usage
 
-Once installed, Claude will automatically use TTS when you ask it to speak or read text aloud.
-
-You can also invoke it directly:
+Once installed, Claude will automatically use TTS when you ask it to speak or read text aloud. You can also invoke it directly:
 
 ```
 /tts Hello, this is a test of the text to speech system.
@@ -53,11 +54,11 @@ You can also invoke it directly:
 
 ### Scripts
 
-- **`say.py`** — Quick speech with automatic chunking (default)
+- **`say.py`** — Quick speech with automatic chunking (default, used by `/tts`)
 - **`speak.py`** — Full-featured with voice/rate/output options
 
 ## Requirements
 
 - Python 3.10+
 - Internet connection (edge-tts uses Microsoft's online TTS service)
-- `edge-tts` and `pygame` packages
+- `edge-tts` and `pygame` (installed automatically by the install script)
