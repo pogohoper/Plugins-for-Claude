@@ -9,18 +9,8 @@ echo ""
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install -q edge-tts pygame
+python -m pip install -q edge-tts pygame 2>/dev/null || python3 -m pip install -q edge-tts pygame 2>/dev/null || pip install -q edge-tts pygame 2>/dev/null || pip3 install -q edge-tts pygame || { echo "Warning: Could not install dependencies automatically. Please install manually: pip install edge-tts pygame"; }
 echo "  Done."
 echo ""
 
-# Show how to use
-echo "Plugin ready! To use it, run Claude Code with:"
-echo ""
-echo "  claude --plugin-dir \"$SCRIPT_DIR\""
-echo ""
-echo "Or add it permanently to your settings by adding this to"
-echo "~/.claude/settings.json under \"plugins\":"
-echo ""
-echo "  \"$SCRIPT_DIR\""
-echo ""
-echo "Then use: /tts Hello world"
+echo "Plugin ready!"
