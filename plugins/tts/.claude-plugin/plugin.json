@@ -1,0 +1,8 @@
+{
+  "name": "tts",
+  "version": "1.0.0",
+  "description": "Text-to-speech synthesis using edge-tts with chunked playback for low latency",
+  "author": "pogohoper",
+  "skills": ["skills/tts"],
+  "scripts": ["scripts/say.py", "scripts/speak.py", "scripts/say.cmd"]
+}

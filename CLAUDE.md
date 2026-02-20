@@ -10,6 +10,7 @@ docs/                              # Reference documentation
   agent-collaboration-best-practices.md  # Multi-agent coordination guide
 plugins/                           # Plugin implementations
   persistent-agent/                # Domain expert agent plugin
+  tts/                             # Text-to-speech plugin
 ```
 
 ## Formatting
@@ -121,7 +122,9 @@ claude --plugin-dir ./plugins/my-plugin --debug  # With loading details
 - YAML frontmatter must pass `yaml.safe_load()` validation
 - Keep agent tool lists minimal — prefer read-only (`Read, Grep, Glob`) unless writes are essential
 
-## Existing Plugin: persistent-agent
+## Existing Plugins
+
+### persistent-agent
 
 Domain expert agents that govern specific code areas. Skills:
 - `/register-domain <path> <name>` — scan and register a new domain agent
@@ -129,6 +132,13 @@ Domain expert agents that govern specific code areas. Skills:
 - `/domain-sync <agent-name>` — re-scan and update knowledge
 
 Agent memory stored in `.claude/agent-memory/<name>/` with files: `domain.json`, `MEMORY.md`, `structure.md`, `dependencies.md`, `patterns.md`.
+
+### tts
+
+Text-to-speech synthesis using edge-tts with chunked playback. Skills:
+- `/tts <text>` — speak text aloud with automatic sentence chunking
+- Supports 6 voices (andrew, guy, aria, ava, jenny, brian) and 3 speed levels
+- Dependencies: `pip install edge-tts pygame`
 
 ## Reference
 
