@@ -1,0 +1,43 @@
+{
+  "name": "plugins-for-claude",
+  "owner": {
+    "name": "pogohoper"
+  },
+  "metadata": {
+    "description": "Advanced Claude Code plugins: TTS, persistent domain agents, and orchestrator",
+    "version": "1.0.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "tts",
+      "source": "./plugins/tts",
+      "description": "Text-to-speech synthesis using edge-tts with chunked playback for low latency",
+      "version": "1.0.0",
+      "author": {
+        "name": "pogohoper"
+      },
+      "keywords": ["tts", "text-to-speech", "audio", "edge-tts"]
+    },
+    {
+      "name": "persistent-agent",
+      "source": "./plugins/persistent-agent",
+      "description": "Create persistent domain-expert agents that govern specific parts of your codebase",
+      "version": "0.1.0",
+      "author": {
+        "name": "pogohoper"
+      },
+      "keywords": ["agents", "domain-expert", "codebase", "knowledge"]
+    },
+    {
+      "name": "orchestrator",
+      "source": "./plugins/orchestrator",
+      "description": "Orchestrate agent teams with best-practice roles for complex tasks",
+      "version": "0.1.0",
+      "author": {
+        "name": "pogohoper"
+      },
+      "keywords": ["orchestrator", "agents", "teams", "workflow"]
+    }
+  ]
+}
