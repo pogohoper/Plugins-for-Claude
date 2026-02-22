@@ -1,0 +1,10 @@
+{
+  "name": "browser-feedback",
+  "version": "1.0.0",
+  "description": "Closed-loop browser feedback for development. Spawns a Sonnet sub-agent that visually verifies UI changes using agent-browser CLI.",
+  "author": {
+    "name": "pogohoper"
+  },
+  "skills": ["./skills/browser-feedback"],
+  "agents": ["./agents/browser-feedback.md"]
+}
