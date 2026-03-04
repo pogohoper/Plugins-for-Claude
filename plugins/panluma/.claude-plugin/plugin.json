@@ -1,7 +1,7 @@
 {
   "name": "panluma",
-  "version": "1.1.0",
-  "description": "PanLuma AI business suite API integration — manage tasks, contacts, sales, bookkeeping, recruiting, support, and 20+ more modules from Claude Code",
+  "version": "1.2.0",
+  "description": "PanLuma AI business suite API integration — manage tasks, contacts, sales, accounting, recruiting, support, and 100+ more modules from Claude Code",
   "author": {
     "name": "pogohoper"
   },

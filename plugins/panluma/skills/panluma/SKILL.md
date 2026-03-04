@@ -1,11 +1,12 @@
 ---
 name: panluma
-description: Interact with the PanLuma AI business suite API — query, create, update, and manage data across all modules (tasks, contacts, sales, bookkeeping, recruiting, support, messaging, files, and more).
+description: This skill should be used when the user asks to "query PanLuma", "create a task in PanLuma", "update PanLuma contacts", "delete PanLuma data", "list PanLuma invoices", "show PanLuma deals", "check PanLuma sales", "manage PanLuma data", "search PanLuma endpoints", "set PanLuma context", "remember my PanLuma sprint", or mentions PanLuma modules (tasks, contacts, sales, accounting, recruiting, support, messaging, files, virtual-team, website-hosting, and more). Provides API integration for the PanLuma AI business suite with per-project working context.
 user-invocable: true
 argument-hint: "<action> [module] [details...]"
 allowed-tools:
   - Bash
   - Read
+  - Write
   - Grep
   - Glob
   - Edit
@@ -13,112 +14,112 @@ allowed-tools:
 
 # PanLuma API Skill
 
-You are a PanLuma API integration assistant. PanLuma is an AI-native business suite with 30+ modules and 400+ API endpoints.
+PanLuma is an AI-native business suite with 100+ modules and 1,400+ API endpoints. This skill enables querying, creating, updating, and managing data across all PanLuma modules via its REST API.
 
-## FIRST: Check for API Key
+## Working Context
 
-Before doing anything else, check if `$PANLUMA_API_KEY` is set:
+Check for a user-defined working context file at `.claude/panluma.local.md` (project-level). If it exists, its YAML frontmatter defines the current focus — use these values to scope API queries automatically (e.g., filter by workspace, board, sprint, pipeline). If the file does not exist, proceed without scoping.
+
+Example `.claude/panluma.local.md`:
+
+```yaml
+---
+workspace_id: "abc-123"
+board_id: "def-456"
+sprint: "Sprint 24"
+pipeline_id: "ghi-789"
+default_module: tasks
+notes: "Currently working on Q1 sales pipeline and Sprint 24 tasks"
+---
+Any additional context or notes here.
+```
+
+The current working context (if any) is shown below:
+
+!`cat .claude/panluma.local.md 2>/dev/null || echo "(no working context set)"`
+
+**Auto-save:** After any API call that reveals or confirms a working scope (workspace ID, board ID, sprint name, pipeline ID, etc.), automatically update `.claude/panluma.local.md` with the discovered context. This ensures future invocations are scoped correctly without the user needing to ask. Merge new values into existing frontmatter — do not overwrite fields the user previously set. If the file does not exist yet, create it with the discovered values.
+
+The user can also explicitly say "set PanLuma context" or "remember my sprint/project/workspace" to create or update this file manually.
+
+## API Key Check
+
+Before making any API call, verify the key is available:
 
 ```bash
 echo "${PANLUMA_API_KEY:-(not set)}"
 ```
 
-If it prints `(not set)`, you MUST:
-1. Tell the user: "No PanLuma API key found. Please provide your API key (starts with `plma_live_`)."
-2. Wait for the user to provide their key.
-3. Once they give it, save it to `~/.claude/settings.json` under the `env` key using the Read and Edit tools:
-   - Read `~/.claude/settings.json`
-   - If an `"env"` key exists, add `"PANLUMA_API_KEY": "<their_key>"` inside it
-   - If no `"env"` key exists, add `"env": { "PANLUMA_API_KEY": "<their_key>" }` to the top-level object
-4. Tell the user: "Key saved. Please restart Claude Code for it to take effect, then run `/panluma` again."
-5. **Stop here** — do not attempt API calls without a key.
+If the key is not set:
+1. Inform the user: "No PanLuma API key found. Provide an API key (starts with `plma_live_`)."
+2. Once provided, save it to `~/.claude/settings.json` under the `env` key using Read and Edit tools.
+3. Instruct the user to restart Claude Code for the change to take effect.
+4. Stop — do not attempt API calls without a valid key.
 
-## Authentication & Environment
+## Workflow
 
-**CRITICAL on Windows/Git Bash**: Always prefix commands with `MSYS_NO_PATHCONV=1` to prevent Git Bash from mangling `/api/...` paths into Windows paths.
+### 1. Look Up Endpoints
+
+Always discover the correct endpoint before making API calls:
 
 ```bash
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" <METHOD> <PATH> [options]
-```
-
-The `$PANLUMA_API_KEY` env var is picked up automatically by the script.
-
-## How to Use
-
-### 1. Look up endpoints first
-
-Before making API calls, look up the correct endpoint:
-
-```bash
-# List all modules
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py"
-
-# Search for endpoints
+# Search for endpoints by keyword
 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" "tasks"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" "contacts"
 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" "invoice"
 
 # List all endpoints in a module
 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --module sales
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --module bookkeeping
 
 # Get full details for a specific path (params, body schema)
 MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --detail "/api/v1/tasks"
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --detail "/api/v1/sales/deals"
 ```
 
-### 2. Make API calls
+### 2. Make API Calls
+
+Use the API helper script for all requests:
 
 ```bash
-# GET requests
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" GET /api/v1/status
+MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" <METHOD> <PATH> [--data JSON] [--params KEY=VALUE ...]
+```
 
+The `$PANLUMA_API_KEY` env var is picked up automatically. The `MSYS_NO_PATHCONV=1` prefix prevents Git Bash on Windows from mangling `/api/...` paths. To override the default base URL, set `PANLUMA_BASE_URL`.
+
+**Pagination:** Use `limit` and `offset` query params for list endpoints. Default to `limit=25` to avoid overwhelming output.
+
+**Error handling:** If the API returns an error (4xx/5xx), show the status code and error body to the user and suggest corrections.
+
+**Examples:**
+
+```bash
 # GET with query params
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" GET /api/v1/tasks --params limit=10 offset=0
+MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" GET /api/v1/tasks --params limit=10
 
 # POST with JSON body
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" POST /api/v1/contacts/companies --data '{"name":"Acme Corp","industry":"Technology"}'
+MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" POST /api/v1/contacts/companies --data '{"name":"Acme Corp"}'
 
 # PUT to update
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" PUT /api/v1/tasks/items/TASK_UUID --data '{"title":"Updated title"}'
+MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" PUT /api/v1/tasks/items/UUID --data '{"title":"Updated"}'
 
 # DELETE
 MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" DELETE /api/v1/contacts/companies/UUID
 ```
 
-## API Base URL
+## Key Modules
 
-`http://panluma-production-alb-1738326734.us-east-1.elb.amazonaws.com`
+All endpoints follow the pattern `/api/v1/<module>/...`. For the full list of 100+ modules and their endpoints, consult `references/api-modules.md`. Note: `bookkeeping` has been renamed to `accounting` in the current API.
 
-Auth header: `X-API-Key: plma_live_...`
+## Additional Resources
 
-Rate limit: 60 requests/minute (check X-RateLimit-* response headers).
+### Reference Files
 
-## Module Overview
+For the complete module overview table, base URL, rate limits, and detailed API call examples, consult:
+- **`references/api-modules.md`** — Full module listing with base paths, key operations, and endpoint discovery patterns
 
-| Module | Base Path | Key Operations |
-|--------|-----------|----------------|
-| **tasks** | `/api/v1/tasks` | Workspaces, boards, items, comments, automations, forms |
-| **contacts** | `/api/v1/contacts` | Companies, people, tiers |
-| **sales** | `/api/v1/sales` | Pipelines, stages, deals, contacts, companies, activities, notes, reports |
-| **bookkeeping** | `/api/v1/bookkeeping` | Accounts, journal entries, invoices, expenses, payments, tax rates, reports |
-| **recruiting** | `/api/v1/recruiting` | Jobs, candidates, applications, interviews, offers, pipelines |
-| **support** | `/api/v1/support` | Tickets, SLA policies, canned responses, satisfaction surveys |
-| **messaging** | `/api/v1/messaging` | Conversations (DM/group/channel), messages, threads, reactions |
-| **chat** | `/api/v1/chat` | AI chat sessions, messages |
-| **email** | `/api/v1/emails` | Inbox, send, read/unread, delegated access |
-| **files** | `/api/v1/files` | Upload, download, folders, external storage |
-| **products** | `/api/v1/products` | Families, products, variants, price lists, bundles |
-| **people** | `/api/v1/people` | Employees, job titles, org chart, compensation |
-| **virtual-team** | `/api/v1/virtual-team` | AI team members, skills, memories, triggers |
-| **shipments** | `/api/v1/shipments` | Shipments, legs, cargo, line items, routing |
-| **users** | `/api/v1/users` | User management, groups, notifications |
-| **admin** | `/api/v1/admin` | Tenant settings, offices, email templates, AI settings |
-| **developer** | `/api/v1/developer` | API keys, tasks/sandbox, usage |
-| **permissions** | `/api/v1/permissions` | RBAC, roles, grants, access lists |
-| **integrations** | `/api/v1/integrations` | Google (Gmail, Drive, Maps), currency |
-| **dashboard** | `/api/v1/dashboard` | Dashboard stats |
-| **auth** | `/api/v1/auth` | Login, register, SSO, password management |
+### Scripts
+
+- **`scripts/panluma_lookup.py`** — Endpoint discovery from the bundled OpenAPI spec. Supports search, module listing, and detailed endpoint inspection.
+- **`scripts/panluma_api.py`** — HTTP client wrapper. Handles auth, query params, JSON body, and error formatting.
+- **`scripts/openapi.json`** — The full PanLuma OpenAPI specification (source of truth for all endpoints).
 
 ## User Request
 

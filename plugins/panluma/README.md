@@ -8,7 +8,7 @@ Provides the `/panluma` skill that lets you query, create, update, and delete da
 
 ## Supported Modules
 
-Tasks, Contacts, Sales/CRM, Bookkeeping, Recruiting, Support, Messaging, Chat, Email, Files, Products, People/HR, Virtual Team (AI agents), Shipments, Users, Admin, Permissions, Integrations, and more — 400+ endpoints total.
+Tasks, Contacts, Sales/CRM, Accounting, Recruiting, Support, Messaging, Chat, Email, Files, Products, People/HR, Virtual Team (AI agents), Shipments, Website Hosting, Users, Admin, Permissions, Integrations, and more — 1,400+ endpoints total.
 
 ## Usage
 
@@ -16,7 +16,7 @@ Tasks, Contacts, Sales/CRM, Bookkeeping, Recruiting, Support, Messaging, Chat, E
 /panluma list my open tasks
 /panluma create a contact company named "Acme Corp"
 /panluma show sales pipeline summary
-/panluma get bookkeeping trial balance
+/panluma get accounting trial balance
 /panluma search for endpoints related to invoices
 ```
 
