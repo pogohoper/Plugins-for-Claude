@@ -1,6 +1,6 @@
 ---
 name: panluma
-description: This skill should be used when the user asks to "query PanLuma", "create a task in PanLuma", "update PanLuma contacts", "delete PanLuma data", "list PanLuma invoices", "show PanLuma deals", "check PanLuma sales", "manage PanLuma data", "search PanLuma endpoints", "set PanLuma context", "remember my PanLuma sprint", or mentions PanLuma modules (tasks, contacts, sales, accounting, recruiting, support, messaging, files, virtual-team, website-hosting, and more). Provides API integration for the PanLuma AI business suite with per-project working context.
+description: Interact with the PanLuma AI business suite API. Use this skill whenever the user mentions "PanLuma" in any context — looking up tasks, managing contacts, checking sales pipelines, viewing invoices, creating support tickets, searching recruiting candidates, updating shipments, configuring virtual team agents, or any other PanLuma operation. This is the ONLY way to access PanLuma's API. Do not attempt to help with PanLuma requests without this skill. It provides endpoint discovery, authenticated API calls, and working context for scoping queries to specific workspaces, boards, or sprints.
 user-invocable: true
 argument-hint: "<action> [module] [details...]"
 allowed-tools:
