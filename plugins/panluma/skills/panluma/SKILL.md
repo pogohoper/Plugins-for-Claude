@@ -1,12 +1,11 @@
 ---
 name: panluma
-description: Interact with the PanLuma AI business suite API. Use this skill whenever the user mentions "PanLuma" in any context — looking up tasks, managing contacts, checking sales pipelines, viewing invoices, creating support tickets, searching recruiting candidates, updating shipments, configuring virtual team agents, or any other PanLuma operation. This is the ONLY way to access PanLuma's API. Do not attempt to help with PanLuma requests without this skill. It provides endpoint discovery, authenticated API calls, and working context for scoping queries to specific workspaces, boards, or sprints.
+description: Interact with the PanLuma AI business suite API — query, create, update, and manage data across all modules (tasks, contacts, sales, bookkeeping, recruiting, support, messaging, files, and more).
 user-invocable: true
 argument-hint: "<action> [module] [details...]"
 allowed-tools:
   - Bash
   - Read
-  - Write
   - Grep
   - Glob
   - Edit
@@ -14,112 +13,154 @@ allowed-tools:
 
 # PanLuma API Skill
 
-PanLuma is an AI-native business suite with 100+ modules and 1,400+ API endpoints. This skill enables querying, creating, updating, and managing data across all PanLuma modules via its REST API.
+PanLuma is an AI-native business suite with 30+ modules and 400+ endpoints.
 
-## Working Context
-
-Check for a user-defined working context file at `.claude/panluma.local.md` (project-level). If it exists, its YAML frontmatter defines the current focus — use these values to scope API queries automatically (e.g., filter by workspace, board, sprint, pipeline). If the file does not exist, proceed without scoping.
-
-Example `.claude/panluma.local.md`:
-
-```yaml
----
-workspace_id: "abc-123"
-board_id: "def-456"
-sprint: "Sprint 24"
-pipeline_id: "ghi-789"
-default_module: tasks
-notes: "Currently working on Q1 sales pipeline and Sprint 24 tasks"
----
-Any additional context or notes here.
-```
-
-The current working context (if any) is shown below:
-
-!`cat .claude/panluma.local.md 2>/dev/null || echo "(no working context set)"`
-
-**Auto-save:** After any API call that reveals or confirms a working scope (workspace ID, board ID, sprint name, pipeline ID, etc.), automatically update `.claude/panluma.local.md` with the discovered context. This ensures future invocations are scoped correctly without the user needing to ask. Merge new values into existing frontmatter — do not overwrite fields the user previously set. If the file does not exist yet, create it with the discovered values.
-
-The user can also explicitly say "set PanLuma context" or "remember my sprint/project/workspace" to create or update this file manually.
-
-## API Key Check
-
-Before making any API call, verify the key is available:
+## FIRST: Check for API Key
 
 ```bash
 echo "${PANLUMA_API_KEY:-(not set)}"
 ```
 
-If the key is not set:
-1. Inform the user: "No PanLuma API key found. Provide an API key (starts with `plma_live_`)."
-2. Once provided, save it to `~/.claude/settings.json` under the `env` key using Read and Edit tools.
-3. Instruct the user to restart Claude Code for the change to take effect.
-4. Stop — do not attempt API calls without a valid key.
+If `(not set)`: ask the user for their key (starts with `plma_live_`), save it to `~/.claude/settings.json` under the `env` key, and tell them to restart Claude Code.
 
-## Workflow
-
-### 1. Look Up Endpoints
-
-Always discover the correct endpoint before making API calls:
+## Script Paths
 
 ```bash
-# Search for endpoints by keyword
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" "tasks"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" "invoice"
-
-# List all endpoints in a module
-python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --module sales
-
-# Get full details for a specific path (params, body schema)
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_lookup.py" --detail "/api/v1/tasks"
+PLUMA="${CLAUDE_PLUGIN_ROOT}"
 ```
 
-### 2. Make API Calls
+Scripts: `$PLUMA/scripts/panluma_api.py`, `$PLUMA/scripts/panluma_lookup.py`, `$PLUMA/scripts/panluma_cache.py`
 
-Use the API helper script for all requests:
+## Context Cache (saves 1-2 API calls per session)
+
+The cache stores workspace_id and active sprint info so you don't re-discover them every time. **Always check the cache first** for any sprint-related query:
 
 ```bash
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" <METHOD> <PATH> [--data JSON] [--params KEY=VALUE ...]
+# Read cache — returns {} if empty or sprint is expired
+python3 "$PLUMA/scripts/panluma_cache.py" get
 ```
 
-The `$PANLUMA_API_KEY` env var is picked up automatically. The `MSYS_NO_PATHCONV=1` prefix prevents Git Bash on Windows from mangling `/api/...` paths. To override the default base URL, set `PANLUMA_BASE_URL`.
-
-**Pagination:** Use `limit` and `offset` query params for list endpoints. Default to `limit=25` to avoid overwhelming output.
-
-**Error handling:** If the API returns an error (4xx/5xx), show the status code and error body to the user and suggest corrections.
-
-**Examples:**
+If `workspace_id` is present, skip the workspaces API call. If `active_sprint` is present, skip the sprints list call. If cache is empty or stale, do the discovery calls and **save the results**:
 
 ```bash
-# GET with query params
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" GET /api/v1/tasks --params limit=10
-
-# POST with JSON body
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" POST /api/v1/contacts/companies --data '{"name":"Acme Corp"}'
-
-# PUT to update
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" PUT /api/v1/tasks/items/UUID --data '{"title":"Updated"}'
-
-# DELETE
-MSYS_NO_PATHCONV=1 python "${CLAUDE_PLUGIN_ROOT}/scripts/panluma_api.py" DELETE /api/v1/contacts/companies/UUID
+# After discovering workspace + sprint, save for next time
+python3 "$PLUMA/scripts/panluma_cache.py" set \
+  --workspace-id WORKSPACE_UUID \
+  --sprint-id SPRINT_UUID \
+  --sprint-name "Sprint Name" \
+  --sprint-end 2026-03-22
 ```
 
-## Key Modules
+The sprint entry auto-expires when its end_date passes. Workspace ID never expires.
 
-All endpoints follow the pattern `/api/v1/<module>/...`. For the full list of 100+ modules and their endpoints, consult `references/api-modules.md`. Note: `bookkeeping` has been renamed to `accounting` in the current API.
+## Output Flags (CRITICAL — always use on list endpoints)
 
-## Additional Resources
+Raw API responses are 50-100KB+. Use at least one flag on every GET that returns a list:
 
-### Reference Files
+| Flag | What it does | When to use |
+|------|-------------|-------------|
+| `--compact` | Keeps only key fields (~90% reduction) | Default for any list |
+| `--fields title,status,priority` | Keeps only specified fields (~97% reduction) | When you need specific columns |
+| `--group-by status` | Groups items by field with counts | Sprint tasks, board overviews |
 
-For the complete module overview table, base URL, rate limits, and detailed API call examples, consult:
-- **`references/api-modules.md`** — Full module listing with base paths, key operations, and endpoint discovery patterns
+Combine: `--fields title,status,priority,assigned_to --group-by status`. Prefer `--fields` over `--compact` for large lists (50+ items).
 
-### Scripts
+**Server-side filtering** with `--params` is even better — less data transferred:
+```bash
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/my-tasks --params status=in_progress --compact
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/my-tasks --params status=todo --fields title,priority
+```
 
-- **`scripts/panluma_lookup.py`** — Endpoint discovery from the bundled OpenAPI spec. Supports search, module listing, and detailed endpoint inspection.
-- **`scripts/panluma_api.py`** — HTTP client wrapper. Handles auth, query params, JSON body, and error formatting.
-- **`scripts/openapi.json`** — The full PanLuma OpenAPI specification (source of truth for all endpoints).
+**Full output only** for single-item GET by ID or mutations (POST/PUT/DELETE).
+
+## Looking Up Endpoints
+
+Use specific terms — "tasks" returns 170+ results:
+```bash
+python3 "$PLUMA/scripts/panluma_lookup.py" "sprint"          # 17 results
+python3 "$PLUMA/scripts/panluma_lookup.py" --module sprints   # all sprint endpoints
+python3 "$PLUMA/scripts/panluma_lookup.py" --detail "/api/v1/tasks/my-tasks"  # params & schema
+```
+
+## Workflow Recipes
+
+Choose the smallest recipe that fits. Check cache first for sprint-related queries.
+
+### My tasks (filtered or full list)
+```bash
+# All my tasks
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/my-tasks --compact
+
+# Specific statuses (1 call + client filter, or 2 calls with server filter)
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/my-tasks --fields title,status,priority
+```
+
+### Sprint progress only
+With cache: **1 call**. Without cache: 3 calls (workspaces → sprints → progress).
+```bash
+# 1. Check cache for workspace_id + sprint_id
+python3 "$PLUMA/scripts/panluma_cache.py" get
+
+# If cache miss: discover and save
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/workspaces --fields id,name
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/workspaces/{workspace_id}/sprints --compact
+# → find "status": "active", then save:
+python3 "$PLUMA/scripts/panluma_cache.py" set --workspace-id WID --sprint-id SID --sprint-name NAME --sprint-end END_DATE
+
+# 2. Get progress (always needed — live data)
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/sprints/{sprint_id}/progress
+```
+
+### Full sprint + my tasks overview
+With cache: **3 calls**. Without: 5 calls.
+```bash
+# 1. Check cache + get my tasks in parallel
+python3 "$PLUMA/scripts/panluma_cache.py" get
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/my-tasks --compact
+
+# 2. If cache miss: discover workspace + sprints, save to cache
+
+# 3. With sprint_id — parallel: progress + sprint tasks
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/sprints/{sprint_id}/progress
+python3 "$PLUMA/scripts/panluma_api.py" GET /api/v1/tasks/sprints/{sprint_id}/tasks --fields title,status,priority,assigned_to --group-by status
+```
+
+### Update / create tasks
+```bash
+python3 "$PLUMA/scripts/panluma_api.py" PUT /api/v1/tasks/{task_id} --data '{"status":"done"}'
+python3 "$PLUMA/scripts/panluma_api.py" POST /api/v1/tasks/boards/{board_id}/tasks --data '{"title":"New task","priority":"high"}'
+```
+
+## Response Structure
+
+Different endpoints use different list keys. The flags handle this automatically.
+
+| Endpoint pattern | List key | Item type |
+|-----------------|----------|-----------|
+| `/tasks/my-tasks` | `data` | task |
+| `/tasks/boards/{id}/tasks` | `data` | task |
+| `/tasks/sprints/{id}/tasks` | `items` | task |
+| `/workspaces` | `data` | workspace |
+| `/workspaces/{id}/sprints` | `sprints` | sprint |
+| `/sprints/{id}/progress` | _(flat object)_ | — |
+
+## Common Modules
+
+| Module | Base Path |
+|--------|-----------|
+| **tasks** | `/api/v1/tasks` — workspaces, boards, items, sprints, comments |
+| **contacts** | `/api/v1/contacts` — companies, people, tiers |
+| **sales** | `/api/v1/sales` — pipelines, deals, activities |
+| **support** | `/api/v1/support` — tickets, SLA, canned responses |
+| **messaging** | `/api/v1/messaging` — conversations, messages, threads |
+
+For all 21 modules, read `references/modules.md`.
+
+## API Info
+
+Base URL: `http://panluma-production-alb-1738326734.us-east-1.elb.amazonaws.com`
+Auth: `X-API-Key: plma_live_...` (auto-set from env)
+Rate limit: 60 req/min
 
 ## User Request
 
