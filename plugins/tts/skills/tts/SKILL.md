@@ -9,30 +9,37 @@ allowed-tools:
 
 # TTS
 
-Speak text aloud using chunked playback for low latency:
+Speak text aloud using chunked playback for low latency. Long text is automatically split at sentence boundaries and the next chunk is pre-generated while the current one plays, so speech starts fast and plays seamlessly.
+
+## Quick usage
 
 ```bash
-python ${CLAUDE_PLUGIN_ROOT}/scripts/say.py "$ARGUMENTS"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py "$ARGUMENTS"
 ```
 
-Speak with voice/rate options:
+## With options
 
 ```bash
-python ${CLAUDE_PLUGIN_ROOT}/scripts/speak.py "Your text here" --voice andrew --rate normal
+# Choose a voice
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py "Hello world" --voice aria
+
+# Speak faster
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py "Hello world" --rate fast
+
+# Save to file instead of playing
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py "Hello world" --output speech.mp3
+
+# List voices
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py --list-voices
+
+# Pipe text in
+echo "Hello world" | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py
 ```
 
-List available voices:
+**Voices:** andrew (default), guy, aria, ava, jenny, brian
 
-```bash
-python ${CLAUDE_PLUGIN_ROOT}/scripts/speak.py --list-voices
-```
-
-**Available voices:** andrew (default), guy, aria, ava, jenny, brian
-
-**Speech rates:** slow, normal (default), fast
+**Rates:** slow, normal (default), fast
 
 **Notes:**
-- Long text is automatically chunked by sentence for low latency
-- User cannot interrupt playback
-- Requires internet connection
+- Requires internet connection (uses Microsoft's online TTS service)
 - Dependencies: `pip install edge-tts pygame`

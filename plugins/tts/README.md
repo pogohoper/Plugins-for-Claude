@@ -32,6 +32,7 @@ install.cmd
 - **Multiple voices** — Andrew (default), Guy, Aria, Ava, Jenny, Brian
 - **Adjustable speech rate** — slow, normal, fast
 - **File output** — optionally save audio to MP3 instead of playing
+- **Pipe support** — accepts text from stdin
 
 ## Usage
 
@@ -52,10 +53,24 @@ Once installed, Claude will automatically use TTS when you ask it to speak or re
 | jenny   | en-US-JennyNeural     |
 | brian   | en-US-BrianNeural     |
 
-### Scripts
+### CLI usage
 
-- **`say.py`** — Quick speech with automatic chunking (default, used by `/tts`)
-- **`speak.py`** — Full-featured with voice/rate/output options
+```bash
+# Basic
+python3 scripts/tts.py "Hello world"
+
+# With voice and rate
+python3 scripts/tts.py "Hello world" --voice aria --rate fast
+
+# Save to file
+python3 scripts/tts.py "Hello world" --output speech.mp3
+
+# From stdin
+echo "Hello world" | python3 scripts/tts.py
+
+# List voices
+python3 scripts/tts.py --list-voices
+```
 
 ## Requirements
 
