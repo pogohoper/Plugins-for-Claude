@@ -40,6 +40,21 @@ echo "Hello world" | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tts.py
 
 **Rates:** slow, normal (default), fast
 
+## Headless / SSH environments
+
+On servers without audio output (headless, SSH, containers), the script automatically detects this and saves the audio to a temp file instead of trying to play it. The output will look like:
+
+```
+No audio output detected (headless/SSH). Audio saved to file.
+FILE:/tmp/tts-abc123.mp3
+```
+
+When you see `FILE:` in the output, deliver the audio to the user through whatever channel is available (file server, chat attachment, email, etc.).
+
+**Environment variables:**
+- `TTS_FORCE_PLAY=1` — Force local playback even if no audio device is detected
+- `TTS_NO_PLAY=1` — Force file output even on machines with audio
+
 **Notes:**
 - Requires internet connection (uses Microsoft's online TTS service)
 - Dependencies: `pip install edge-tts pygame`

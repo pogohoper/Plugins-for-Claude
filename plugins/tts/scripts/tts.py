@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Text-to-speech using edge-tts with chunked playback for low latency."""
-import sys, asyncio, tempfile, time, os, re, threading, queue, argparse
+import sys, asyncio, tempfile, time, os, re, threading, queue, argparse, shutil
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
@@ -70,6 +70,57 @@ def generate_and_load(text, pygame, voice, rate, result_queue):
         result_queue.put(("ok", sound, tmp))
     except Exception as e:
         result_queue.put(("error", None, str(e)))
+
+
+def has_audio_output():
+    """Check if real audio output is available (not a headless/dummy sink)."""
+    # Explicit override
+    if os.environ.get("TTS_FORCE_PLAY"):
+        return True
+    if os.environ.get("TTS_NO_PLAY"):
+        return False
+
+    # Check for PulseAudio/PipeWire real sinks
+    if shutil.which("pactl"):
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["pactl", "list", "short", "sinks"],
+                capture_output=True, text=True, timeout=3,
+            )
+            sinks = result.stdout.strip()
+            if sinks:
+                # Filter out dummy/null sinks
+                for line in sinks.splitlines():
+                    if "dummy" not in line.lower() and "null" not in line.lower():
+                        return True
+            return False
+        except Exception:
+            pass
+
+    # Check for ALSA devices
+    if shutil.which("aplay"):
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["aplay", "-l"], capture_output=True, text=True, timeout=3,
+            )
+            if "card" in result.stdout.lower():
+                return True
+            return False
+        except Exception:
+            pass
+
+    # macOS: always has audio
+    if sys.platform == "darwin":
+        return True
+
+    # No display + no audio tools = likely headless
+    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        return False
+
+    # Default: try to play
+    return True
 
 
 def speak_chunked(text, voice, rate):
@@ -169,10 +220,18 @@ def main():
     rate = RATE_MAP.get(args.rate, "+0%")
 
     if args.output:
+        # Explicit output path
         asyncio.run(generate(sanitize(text), args.output, voice, rate))
-        print(f"Audio saved to: {args.output}")
-    else:
+        print(f"Saved: {args.output}")
+    elif has_audio_output():
+        # Local playback
         speak_chunked(sanitize(text), voice, rate)
+    else:
+        # Headless fallback: save to temp file
+        tmp = tempfile.mktemp(suffix=".mp3", prefix="tts-")
+        asyncio.run(generate(sanitize(text), tmp, voice, rate))
+        print(f"No audio output detected (headless/SSH). Audio saved to file.")
+        print(f"FILE:{tmp}")
 
 
 if __name__ == "__main__":
